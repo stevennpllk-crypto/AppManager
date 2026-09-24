@@ -1,0 +1,33 @@
+workflows:
+  appmanager-debug:
+    name: AppManager - Debug APK
+    max_build_duration: 60
+    instance_type: linux_x2
+    environment:
+      vars:
+        GRADLE_VERSION: "8.7"
+    scripts:
+      - name: Set Android SDK location
+        script: |
+          echo "sdk.dir=$ANDROID_SDK_ROOT" > "$CM_BUILD_DIR/local.properties"
+      - name: Prepare Gradle wrapper
+        script: |
+          set -e
+          if [ ! -f "./gradlew" ]; then
+            echo "Gradle wrapper not found. Creating Gradle $GRADLE_VERSION wrapper..."
+            if ! command -v gradle >/dev/null 2>&1; then
+              echo "ERROR: Gradle is not available on this Codemagic image."
+              exit 1
+            fi
+            gradle wrapper --gradle-version "$GRADLE_VERSION" --distribution-type bin
+          fi
+          chmod +x ./gradlew
+          ./gradlew --version
+      - name: Build app-debug.apk
+        script: |
+          set -e
+          ./gradlew --no-daemon --stacktrace assembleDebug
+          test -f "app/build/outputs/apk/debug/app-debug.apk"
+          echo "APK created successfully: app/build/outputs/apk/debug/app-debug.apk"
+    artifacts:
+      - app/build/outputs/apk/debug/app-debug.apk
